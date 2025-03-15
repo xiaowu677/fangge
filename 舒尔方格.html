@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>舒尔特方格 - 专注力训练</title>
+    <style>
+        :root {
+            --primary-color: #007AFF;
+            --success-color: #34C759;
+            --error-color: #FF3B30;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(135deg, #F5F7FA 0%, #C3CFE2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin: 20px 0;
+            color: #1D1D1F;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .game-container {
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .timer {
+            font-family: 'Menlo', monospace;
+            font-size: 24px;
+            color: var(--primary-color);
+            background: rgba(0,0,0,0.05);
+            padding: 8px 16px;
+            border-radius: 12px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+        }
+
+        .cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+
+        .cell.correct {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .cell.wrong {
+            background: var(--error-color);
+            color: white;
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary-color), #0063D8);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(0,122,255,0.4);
+        }
+
+        .copyright {
+            margin-top: 30px;
+            color: #86868B;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>舒尔特方格</h1>
+    </div>
+    
+    <div class="game-container">
+        <div class="control-bar">
+            <div class="timer">00:00.00</div>
+            <button onclick="startGame()">开始游戏</button>
+        </div>
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="copyright">
+        © 2025 专注力训练游戏 | Mr.Peng 18561210111
+    </div>
+
+    <audio id="correctSound" src="correct.mp3"></audio>
+    <audio id="wrongSound" src="wrong.mp3"></audio>
+    <audio id="successSound" src="success.mp3"></audio>
+
+    <script>
+        let currentNumber = 1;
+        let isPlaying = false;
+        let startTime;
+        let timerInterval;
+        const gridSize = 5;
+        const totalNumbers = gridSize * gridSize;
+
+        function generateGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            const numbers = Array.from({length: totalNumbers}, (_, i) => i + 1);
+            numbers.sort(() => Math.random() - 0.5);
+
+            numbers.forEach(num => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = num;
+                cell.onclick = () => handleClick(num, cell);
+                grid.appendChild(cell);
+            });
+        }
+
+        function handleClick(number, cell) {
+            if (!isPlaying) return;
+
+            if (number === currentNumber) {
+                playSound('correctSound');
+                cell.classList.add('correct');
+                currentNumber++;
+                
+                if (currentNumber > totalNumbers) {
+                    finishGame();
+                }
+            } else {
+                playSound('wrongSound');
+                cell.classList.add('wrong');
+                setTimeout(() => cell.classList.remove('wrong'), 500);
+            }
+        }
+
+        function playSound(id) {
+            const audio = document.getElementById(id);
+            audio.currentTime = 0;
+            audio.play();
+        }
+
+        function startGame() {
+            isPlaying = true;
+            currentNumber = 1;
+            resetTimer();
+            startTimer();
+            generateGrid();
+        }
+
+        function finishGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            playSound('successSound');
+            setTimeout(() => alert(`恭喜完成！用时：${document.querySelector('.timer').textContent}`), 100);
+        }
+
+        function resetTimer() {
+            document.querySelector('.timer').textContent = '00:00.00';
+        }
+
+        function startTimer() {
+            startTime = Date.now();
+            clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const minutes = Math.floor(elapsed / 60000);
+                const seconds = ((elapsed % 60000) / 1000).toFixed(2);
+                document.querySelector('.timer').textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(5, '0')}`;
+            }, 10);
+        }
+    </script>
+</body>
+</html>
